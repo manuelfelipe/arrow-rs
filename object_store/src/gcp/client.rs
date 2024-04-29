@@ -572,6 +572,7 @@ impl GetClient for GoogleCloudStorageClient {
     const HEADER_CONFIG: HeaderConfig = HeaderConfig {
         etag_required: true,
         last_modified_required: true,
+        content_length_required: false,
         version_header: Some(VERSION_HEADER),
     };
 

@@ -31,6 +31,10 @@ pub struct HeaderConfig {
     ///
     /// Defaults to `true`
     pub etag_required: bool,
+    /// Wheter to require a Content-Length header when extracting [`ObjectMeta`] from headers.
+    ///
+    /// Defaults to `false`
+    pub content_length_required: bool,
     /// Whether to require a Last-Modified header when extracting [`ObjectMeta`] from headers.
     ///
     /// Defaults to `true`
@@ -113,14 +117,16 @@ pub fn header_meta(
         Err(e) => return Err(e),
     };
 
-    let content_length = headers
-        .get(CONTENT_LENGTH)
-        .context(MissingContentLengthSnafu)?;
-
-    let content_length = content_length.to_str().context(BadHeaderSnafu)?;
-    let size = content_length
-        .parse()
-        .context(InvalidContentLengthSnafu { content_length })?;
+    let size = match headers.get(CONTENT_LENGTH) {
+        Some(content_length) => {
+            let content_length = content_length.to_str().context(BadHeaderSnafu)?;
+            content_length
+                .parse()
+                .context(InvalidContentLengthSnafu { content_length })?
+        }
+        None if cfg.content_length_required => return Err(Error::MissingContentLength),
+        None => 0,
+    };
 
     let version = match cfg.version_header.and_then(|h| headers.get(h)) {
         Some(v) => Some(v.to_str().context(BadHeaderSnafu)?.to_string()),
